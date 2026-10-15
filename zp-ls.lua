@@ -14,7 +14,7 @@ local WHITELIST_URL = "https://raw.githubusercontent.com/sulaimansheva8-droid/za
 -- list ini yang dipakai. Tambahkan username kamu di sini juga!
 local FALLBACK_WHITELIST = {
     "ZayvorPrimeX",
-    -- "TemanKamu1",
+    -- "ipskwan2",
 }
 
 -- ======================================================
