@@ -9,7 +9,7 @@
 -- KONFIGURASI WHITELIST
 -- Ganti URL di bawah dengan RAW URL whitelist.txt kamu
 -- ======================================================
-local WHITELIST_URL = "https://raw.githubusercontent.com/sulaimansheva8-droid/zayvor-ls-hub/main/whitelist.txt"
+local WHITELIST_URL = "https://zayvor-whitelist.baronom296.workers.dev/whitelist.txt?token=zayvor2025rahasia"
 -- Fallback: kalau HTTP gagal / executor tidak support request,
 -- list ini yang dipakai. Tambahkan username kamu di sini juga!
 local FALLBACK_WHITELIST = {
