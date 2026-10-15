@@ -1,0 +1,2569 @@
+--[[
+========================================================
+  ZAYVOR LS - Whitelisted Edition
+  Github: https://github.com/USERNAME/NAMA-REPO
+========================================================
+]]
+
+-- ======================================================
+-- KONFIGURASI WHITELIST
+-- Ganti URL di bawah dengan RAW URL whitelist.txt kamu
+-- ======================================================
+local WHITELIST_URL = "https://raw.githubusercontent.com/USERNAME/NAMA-REPO/main/whitelist.txt"
+
+-- Fallback: kalau HTTP gagal / executor tidak support request,
+-- list ini yang dipakai. Tambahkan username kamu di sini juga!
+local FALLBACK_WHITELIST = {
+    "ZayvorPrimeX",
+    -- "TemanKamu1",
+}
+
+-- ======================================================
+-- WHITELIST CHECKER
+-- ======================================================
+local httpRequest = (syn and syn.request)
+    or (http and http.request)
+    or (fluxus and fluxus.request)
+    or http_request
+    or request
+
+local function checkWhitelist(player)
+    if not player then return false end
+
+    local username = player.Name
+    local displayName = player.DisplayName
+    local userId = tostring(player.UserId)
+
+    -- Coba fetch dari GitHub
+    if httpRequest then
+        local ok, response = pcall(httpRequest, {
+            Url = WHITELIST_URL,
+            Method = "GET"
+        })
+
+        if ok and response and response.Body then
+            for line in string.gmatch(response.Body, "[^\r\n]+") do
+                local clean = string.match(line, "^%s*(.-)%s*$")
+                if clean and clean ~= "" then
+                    if clean == username or clean == displayName or clean == userId then
+                        return true, "github"
+                    end
+                end
+            end
+            -- Berhasil fetch tapi tidak ketemu → tidak whitelisted
+            return false, "not_in_list"
+        end
+    end
+
+    -- Fallback ke list lokal
+    for _, entry in ipairs(FALLBACK_WHITELIST) do
+        if entry == username or entry == displayName or entry == userId then
+            return true, "fallback"
+        end
+    end
+
+    return false, "fallback_denied"
+end
+
+-- ======================================================
+-- AMBIL PLAYER (butuh sebelum cek whitelist)
+-- ======================================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+local isAllowed, source = checkWhitelist(LocalPlayer)
+
+if not isAllowed then
+    warn("[ZAYVOR LS] ❌ ACCESS DENIED untuk: @" .. LocalPlayer.Name .. " (source: " .. tostring(source) .. ")")
+
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "❌ ACCESS DENIED",
+            Text = "Username @" .. LocalPlayer.Name .. " tidak terdaftar di whitelist!",
+            Duration = 5
+        })
+    end)
+
+    return
+end
+
+print("[ZAYVOR LS] ✅ Whitelist OK (" .. tostring(source) .. ") - Welcome, @" .. LocalPlayer.Name)
+
+-- ======================================================
+-- SCRIPT UTAMA
+-- ======================================================
+local unpackFn = unpack or table.unpack
+print("Alhamdulillah Allah Masih Sayang Dan Rindu Pada Kita Semua 🤍")
+
+local clonerefFn = type(cloneref) == "function" and cloneref
+if not clonerefFn then
+    clonerefFn = function(...)
+        return ...
+    end
+end
+
+local UserInputService = clonerefFn(game:GetService("UserInputService"))
+local CoreGui = clonerefFn(game:GetService("CoreGui"))
+local RunService = clonerefFn(game:GetService("RunService"))
+local ReplicatedStorage = clonerefFn(game:GetService("ReplicatedStorage"))
+local Workspace = clonerefFn(game:GetService("Workspace"))
+local Lighting = clonerefFn(game:GetService("Lighting"))
+local TeleportService = clonerefFn(game:GetService("TeleportService"))
+local TweenService = clonerefFn(game:GetService("TweenService"))
+local Stats = clonerefFn(game:GetService("Stats"))
+
+local RobloxGui = CoreGui:WaitForChild("RobloxGui", 5) or CoreGui:FindFirstChild("RobloxGui")
+
+local guiParent
+if not gethui then
+    local canAccessCoreGui = pcall(function()
+        return CoreGui.Name
+    end)
+    guiParent = canAccessCoreGui and CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+else
+    guiParent = gethui()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ZayvorGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = guiParent
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+mainFrame.Size = UDim2.new(0, 210, 0, 268)
+mainFrame.Position = UDim2.new(0.5, 0, 0.25, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 15)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.ClipsDescendants = false
+mainFrame.Parent = ScreenGui
+
+local uiScale = Instance.new("UIScale")
+uiScale.Name = "ResponsiveScale"
+uiScale.Parent = mainFrame
+
+local function updateResponsiveScale()
+    local camera = Workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
+    local viewport = camera.ViewportSize
+    if viewport.X > 0 and viewport.Y > 0 then
+        uiScale.Scale = math.clamp(math.min(viewport.X, viewport.Y) / 499, 0.4, 2.5)
+    end
+end
+
+if Workspace.CurrentCamera then
+    Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
+end
+
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    local camera = Workspace.CurrentCamera
+    if camera then
+        camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
+        updateResponsiveScale()
+    end
+end)
+
+task.spawn(updateResponsiveScale)
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 7)
+mainCorner.Parent = mainFrame
+
+local mainBgImage = Instance.new("ImageLabel")
+mainBgImage.Name = "MainBgImage"
+mainBgImage.Size = UDim2.new(1, 0, 1, 0)
+mainBgImage.Position = UDim2.new(0, 0, 0, 0)
+mainBgImage.BackgroundTransparency = 1
+mainBgImage.Image = "rbxassetid://86562021651647"
+mainBgImage.ScaleType = Enum.ScaleType.Crop
+mainBgImage.ZIndex = mainFrame.ZIndex
+mainBgImage.Active = false
+mainBgImage.Parent = mainFrame
+
+local bgCorner = Instance.new("UICorner")
+bgCorner.CornerRadius = UDim.new(0, 7)
+bgCorner.Parent = mainBgImage
+
+local outerGlowFrame = Instance.new("Frame")
+outerGlowFrame.Name = "OuterGlow"
+outerGlowFrame.BackgroundColor3 = Color3.fromRGB(255, 70, 0)
+outerGlowFrame.BorderSizePixel = 0
+outerGlowFrame.ZIndex = mainFrame.ZIndex - 1
+outerGlowFrame.Parent = mainFrame
+
+local glowCorner = Instance.new("UICorner")
+glowCorner.CornerRadius = UDim.new(0, 10)
+glowCorner.Parent = outerGlowFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Thickness = 1.6
+mainStroke.Color = Color3.fromRGB(255, 255, 255)
+mainStroke.Parent = mainFrame
+
+local strokeGradient = Instance.new("UIGradient")
+strokeGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 30, 0)),
+    ColorSequenceKeypoint.new(0.35, Color3.fromRGB(255, 130, 0)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 220, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 30, 0))
+})
+strokeGradient.Parent = mainStroke
+
+local topStatsFrame = Instance.new("Frame")
+topStatsFrame.Name = "TopStatsFrame"
+topStatsFrame.Size = UDim2.new(1, 0, 0, 22)
+topStatsFrame.Position = UDim2.new(0, 0, 0, -28)
+topStatsFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 12)
+topStatsFrame.BorderSizePixel = 0
+topStatsFrame.Parent = mainFrame
+
+local topStatsCorner = Instance.new("UICorner")
+topStatsCorner.CornerRadius = UDim.new(0, 5)
+topStatsCorner.Parent = topStatsFrame
+
+local topStatsStroke = Instance.new("UIStroke")
+topStatsStroke.Thickness = 1.2
+topStatsStroke.Color = Color3.fromRGB(255, 120, 0)
+topStatsStroke.Parent = topStatsFrame
+
+local topStatsLabel = Instance.new("TextLabel")
+topStatsLabel.Name = "TopStatsLabel"
+topStatsLabel.Size = UDim2.new(1, 0, 1, 0)
+topStatsLabel.BackgroundTransparency = 1
+topStatsLabel.RichText = true
+topStatsLabel.Font = Enum.Font.GothamBold
+topStatsLabel.TextSize = 8.5
+topStatsLabel.TextXAlignment = Enum.TextXAlignment.Center
+topStatsLabel.Text = "<font color='#00FFAA'>⚡ SENT: 0</font>  <font color='#888888'>|</font>  <font color='#FF8C00'>RATE: UNLIMITED ♾\239\184\143</font>"
+topStatsLabel.Parent = topStatsFrame
+
+local gradientRotation = 0
+local particleAccumulator = 0
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    gradientRotation += deltaTime * 130
+    if gradientRotation >= 360 then
+        gradientRotation = 0
+    end
+    strokeGradient.Rotation = gradientRotation
+
+    local pulse = (math.sin(tick() * 4) + 1) / 2
+    if outerGlowFrame and outerGlowFrame.Parent then
+        outerGlowFrame.BackgroundTransparency = 0.8 + pulse * 0.1
+
+        local glowSize = 6 + pulse * 5
+        outerGlowFrame.Size = UDim2.new(1, glowSize, 1, glowSize)
+        outerGlowFrame.Position = UDim2.new(0, -glowSize / 2, 0, -glowSize / 2)
+    end
+
+    particleAccumulator += deltaTime
+    if particleAccumulator >= 0.08 then
+        particleAccumulator = 0
+
+        local particle = Instance.new("Frame")
+        particle.Size = UDim2.new(0, math.random(2, 3), 0, math.random(2, 4))
+        particle.Position = UDim2.new(math.random() * 0.9 + 0.05, 0, 1, 0)
+
+        local colorRoll = math.random(1, 3)
+        if colorRoll == 1 then
+            particle.BackgroundColor3 = Color3.fromRGB(255, 50, 10)
+        elseif colorRoll == 2 then
+            particle.BackgroundColor3 = Color3.fromRGB(255, 140, 20)
+        else
+            particle.BackgroundColor3 = Color3.fromRGB(255, 230, 70)
+        end
+
+        particle.BorderSizePixel = 0
+        particle.ZIndex = mainFrame.ZIndex + 2
+        particle.Parent = mainFrame
+
+        local particleCorner = Instance.new("UICorner")
+        particleCorner.CornerRadius = UDim.new(1, 0)
+        particleCorner.Parent = particle
+
+        local riseSpeed = math.random(40, 75)
+        local driftSpeed = math.random(-12, 12)
+        local lifetime = math.random(7, 13) / 10
+        local elapsed = 0
+
+        local particleConnection
+        particleConnection = RunService.RenderStepped:Connect(function(step)
+            elapsed += step
+
+            if elapsed >= lifetime or (not mainFrame or not mainFrame.Parent) then
+                particleConnection:Disconnect()
+                particle:Destroy()
+                return
+            end
+
+            particle.Position = particle.Position + UDim2.new(0, driftSpeed * step, 0, -riseSpeed * step)
+            particle.BackgroundTransparency = elapsed / lifetime
+        end)
+    end
+end)
+
+local headerBadge = Instance.new("Frame")
+headerBadge.Name = "HeaderBadge"
+headerBadge.Size = UDim2.new(0, 150, 0, 18)
+headerBadge.Position = UDim2.new(0, 6, 0, 2)
+headerBadge.BackgroundColor3 = Color3.fromRGB(26, 26, 30)
+headerBadge.BorderSizePixel = 0
+headerBadge.ZIndex = mainFrame.ZIndex + 1
+headerBadge.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(1, 0)
+headerCorner.Parent = headerBadge
+
+local headerStroke = Instance.new("UIStroke")
+headerStroke.Thickness = 1
+headerStroke.Color = Color3.fromRGB(55, 50, 58)
+headerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+headerStroke.Parent = headerBadge
+
+local titleNameLabel = Instance.new("TextLabel")
+titleNameLabel.Name = "TitleName"
+titleNameLabel.Size = UDim2.new(0, 54, 1, 0)
+titleNameLabel.Position = UDim2.new(0, 8, 0, 0)
+titleNameLabel.BackgroundTransparency = 1
+titleNameLabel.RichText = true
+titleNameLabel.Font = Enum.Font.GothamBold
+titleNameLabel.TextSize = 8
+titleNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleNameLabel.Text = "<b>ZAYVOR LS</b>"
+titleNameLabel.ZIndex = headerBadge.ZIndex + 1
+titleNameLabel.Parent = headerBadge
+
+local playerStatsLabel = Instance.new("TextLabel")
+playerStatsLabel.Name = "Title"
+playerStatsLabel.Size = UDim2.new(0, 84, 1, 0)
+playerStatsLabel.Position = UDim2.new(0, 63, 0, 0)
+playerStatsLabel.BackgroundTransparency = 1
+playerStatsLabel.RichText = true
+playerStatsLabel.Font = Enum.Font.GothamBold
+playerStatsLabel.TextSize = 7.5
+playerStatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerStatsLabel.Text = "<font color='#FFA500'>👥 1</font>  <font color='#00E5FF'>💾 0MB</font>"
+playerStatsLabel.ZIndex = headerBadge.ZIndex + 1
+playerStatsLabel.Parent = headerBadge
+
+task.spawn(function()
+    while ScreenGui and ScreenGui.Parent do
+        pcall(function()
+            local playerCount = #Players:GetPlayers()
+            local memoryMb = math.floor(Stats:GetTotalMemoryUsageMb())
+            playerStatsLabel.Text = string.format("<font color='#FFA500'>👥 %d</font>  <font color='#00E5FF'>💾 %dMB</font>", playerCount, memoryMb)
+        end)
+        task.wait(0.5)
+    end
+end)
+
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 18, 0, 18)
+minimizeButton.Position = UDim2.new(1, -42, 0, 2)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(45, 25, 20)
+minimizeButton.Text = "-"
+minimizeButton.TextColor3 = Color3.fromRGB(255, 160, 50)
+minimizeButton.Font = Enum.Font.GothamMedium
+minimizeButton.TextSize = 13
+minimizeButton.ZIndex = mainFrame.ZIndex + 1
+minimizeButton.Parent = mainFrame
+
+local minimizeCorner = Instance.new("UICorner")
+minimizeCorner.CornerRadius = UDim.new(0, 4)
+minimizeCorner.Parent = minimizeButton
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 18, 0, 18)
+closeButton.Position = UDim2.new(1, -21, 0, 2)
+closeButton.BackgroundColor3 = Color3.fromRGB(60, 20, 25)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 90, 100)
+closeButton.Font = Enum.Font.GothamMedium
+closeButton.TextSize = 10
+closeButton.ZIndex = mainFrame.ZIndex + 1
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = closeButton
+
+local destroyModeButton = Instance.new("TextButton")
+destroyModeButton.Name = "DestroyBtn"
+destroyModeButton.Size = UDim2.new(0.435, 0, 0, 20)
+destroyModeButton.Position = UDim2.new(0.05, 0, 0, 25)
+destroyModeButton.BackgroundColor3 = Color3.fromRGB(30, 20, 25)
+destroyModeButton.Text = "⚡ DESTROY"
+destroyModeButton.TextColor3 = Color3.fromRGB(210, 160, 150)
+destroyModeButton.Font = Enum.Font.GothamBold
+destroyModeButton.TextSize = 8
+destroyModeButton.ZIndex = mainFrame.ZIndex + 1
+destroyModeButton.Parent = mainFrame
+
+local destroyModeCorner = Instance.new("UICorner")
+destroyModeCorner.CornerRadius = UDim.new(0, 4)
+destroyModeCorner.Parent = destroyModeButton
+
+local destroyModeStroke = Instance.new("UIStroke")
+destroyModeStroke.Thickness = 1
+destroyModeStroke.Color = Color3.fromRGB(90, 40, 30)
+destroyModeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+destroyModeStroke.Parent = destroyModeButton
+
+local normalModeButton = Instance.new("TextButton")
+normalModeButton.Name = "UnlimitedNormalBtn"
+normalModeButton.Size = UDim2.new(0.435, 0, 0, 20)
+normalModeButton.Position = UDim2.new(0.515, 0, 0, 25)
+normalModeButton.BackgroundColor3 = Color3.fromRGB(200, 90, 10)
+normalModeButton.Text = "♾\239\184\143 UNLIMITED"
+normalModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+normalModeButton.Font = Enum.Font.GothamBold
+normalModeButton.TextSize = 8
+normalModeButton.ZIndex = mainFrame.ZIndex + 1
+normalModeButton.Parent = mainFrame
+
+local normalModeCorner = Instance.new("UICorner")
+normalModeCorner.CornerRadius = UDim.new(0, 4)
+normalModeCorner.Parent = normalModeButton
+
+local normalModeStroke = Instance.new("UIStroke")
+normalModeStroke.Thickness = 1
+normalModeStroke.Color = Color3.fromRGB(255, 200, 50)
+normalModeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+normalModeStroke.Parent = normalModeButton
+
+local autoModeButton = Instance.new("TextButton")
+autoModeButton.Name = "AutoButton"
+autoModeButton.Size = UDim2.new(0.26, 0, 0, 20)
+autoModeButton.Position = UDim2.new(0.05, 0, 0, 48)
+autoModeButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+autoModeButton.Text = "AUTO: OFF"
+autoModeButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+autoModeButton.Font = Enum.Font.GothamMedium
+autoModeButton.TextSize = 7.5
+autoModeButton.ZIndex = mainFrame.ZIndex + 1
+autoModeButton.Parent = mainFrame
+
+local autoModeCorner = Instance.new("UICorner")
+autoModeCorner.CornerRadius = UDim.new(0, 4)
+autoModeCorner.Parent = autoModeButton
+
+local autoModeStroke = Instance.new("UIStroke")
+autoModeStroke.Thickness = 1
+autoModeStroke.Color = Color3.fromRGB(90, 40, 30)
+autoModeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+autoModeStroke.Parent = autoModeButton
+
+local limitButton = Instance.new("TextButton")
+limitButton.Name = "LimitButton"
+limitButton.Size = UDim2.new(0.26, 0, 0, 20)
+limitButton.Position = UDim2.new(0.05, 0, 0, 71)
+limitButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+limitButton.Text = "LIMIT: OFF"
+limitButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+limitButton.Font = Enum.Font.GothamMedium
+limitButton.TextSize = 7.5
+limitButton.ZIndex = mainFrame.ZIndex + 1
+limitButton.Parent = mainFrame
+
+local limitCorner = Instance.new("UICorner")
+limitCorner.CornerRadius = UDim.new(0, 4)
+limitCorner.Parent = limitButton
+
+local limitStroke = Instance.new("UIStroke")
+limitStroke.Thickness = 1
+limitStroke.Color = Color3.fromRGB(90, 40, 30)
+limitStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+limitStroke.Parent = limitButton
+
+local spamButton = Instance.new("TextButton")
+spamButton.Name = "MainButton"
+spamButton.Size = UDim2.new(0.61, 0, 0, 43)
+spamButton.Position = UDim2.new(0.34, 0, 0, 48)
+spamButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+spamButton.Text = "SPAM : OFF"
+spamButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+spamButton.Font = Enum.Font.GothamBold
+spamButton.TextSize = 10
+spamButton.ZIndex = mainFrame.ZIndex + 1
+spamButton.Parent = mainFrame
+
+local spamCorner = Instance.new("UICorner")
+spamCorner.CornerRadius = UDim.new(0, 5)
+spamCorner.Parent = spamButton
+
+local spamStroke = Instance.new("UIStroke")
+spamStroke.Thickness = 1.2
+spamStroke.Color = Color3.fromRGB(90, 40, 30)
+spamStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+spamStroke.Parent = spamButton
+
+local walkSpeedInput = Instance.new("TextBox")
+walkSpeedInput.Name = "WalkSpeedInput"
+walkSpeedInput.Size = UDim2.new(0.28, 0, 0, 20)
+walkSpeedInput.Position = UDim2.new(0.05, 0, 0, 94)
+walkSpeedInput.BackgroundColor3 = Color3.fromRGB(25, 18, 22)
+walkSpeedInput.Font = Enum.Font.Gotham
+walkSpeedInput.PlaceholderText = "Speed..."
+walkSpeedInput.Text = "50"
+walkSpeedInput.TextColor3 = Color3.fromRGB(255, 225, 215)
+walkSpeedInput.TextSize = 8.5
+walkSpeedInput.ZIndex = mainFrame.ZIndex + 1
+walkSpeedInput.Parent = mainFrame
+
+local speedInputCorner = Instance.new("UICorner")
+speedInputCorner.CornerRadius = UDim.new(0, 4)
+speedInputCorner.Parent = walkSpeedInput
+
+local walkSpeedButton = Instance.new("TextButton")
+walkSpeedButton.Name = "WalkSpeedButton"
+walkSpeedButton.Size = UDim2.new(0.59, 0, 0, 20)
+walkSpeedButton.Position = UDim2.new(0.36, 0, 0, 94)
+walkSpeedButton.BackgroundColor3 = Color3.fromRGB(35, 22, 25)
+walkSpeedButton.Text = "⚡ SPEED : OFF"
+walkSpeedButton.TextColor3 = Color3.fromRGB(220, 160, 150)
+walkSpeedButton.Font = Enum.Font.GothamMedium
+walkSpeedButton.TextSize = 8.5
+walkSpeedButton.ZIndex = mainFrame.ZIndex + 1
+walkSpeedButton.Parent = mainFrame
+
+local speedButtonCorner = Instance.new("UICorner")
+speedButtonCorner.CornerRadius = UDim.new(0, 4)
+speedButtonCorner.Parent = walkSpeedButton
+
+local teleportSpawnButton = Instance.new("TextButton")
+teleportSpawnButton.Name = "TeleportButton"
+teleportSpawnButton.Size = UDim2.new(0.9, 0, 0, 20)
+teleportSpawnButton.Position = UDim2.new(0.05, 0, 0, 117)
+teleportSpawnButton.BackgroundColor3 = Color3.fromRGB(80, 25, 20)
+teleportSpawnButton.Text = "TP TO SPAWN"
+teleportSpawnButton.TextColor3 = Color3.fromRGB(255, 220, 200)
+teleportSpawnButton.Font = Enum.Font.GothamMedium
+teleportSpawnButton.TextSize = 8.5
+teleportSpawnButton.ZIndex = mainFrame.ZIndex + 1
+teleportSpawnButton.Parent = mainFrame
+
+local teleportSpawnCorner = Instance.new("UICorner")
+teleportSpawnCorner.CornerRadius = UDim.new(0, 4)
+teleportSpawnCorner.Parent = teleportSpawnButton
+
+local teleportPlayerMenuButton = Instance.new("TextButton")
+teleportPlayerMenuButton.Name = "TpPlayerMenuBtn"
+teleportPlayerMenuButton.Size = UDim2.new(0.9, 0, 0, 20)
+teleportPlayerMenuButton.Position = UDim2.new(0.05, 0, 0, 140)
+teleportPlayerMenuButton.BackgroundColor3 = Color3.fromRGB(40, 22, 28)
+teleportPlayerMenuButton.Text = "👤 TELEPORT PLAYER ◀"
+teleportPlayerMenuButton.TextColor3 = Color3.fromRGB(230, 180, 190)
+teleportPlayerMenuButton.Font = Enum.Font.GothamMedium
+teleportPlayerMenuButton.TextSize = 8
+teleportPlayerMenuButton.ZIndex = mainFrame.ZIndex + 1
+teleportPlayerMenuButton.Parent = mainFrame
+
+local teleportPlayerMenuCorner = Instance.new("UICorner")
+teleportPlayerMenuCorner.CornerRadius = UDim.new(0, 4)
+teleportPlayerMenuCorner.Parent = teleportPlayerMenuButton
+
+local espButton = Instance.new("TextButton")
+espButton.Name = "EspButton"
+espButton.Size = UDim2.new(0.435, 0, 0, 20)
+espButton.Position = UDim2.new(0.05, 0, 0, 163)
+espButton.BackgroundColor3 = Color3.fromRGB(20, 45, 55)
+espButton.Text = "👁\239\184\143 ESP : OFF"
+espButton.TextColor3 = Color3.fromRGB(100, 220, 255)
+espButton.Font = Enum.Font.GothamMedium
+espButton.TextSize = 8
+espButton.ZIndex = mainFrame.ZIndex + 1
+espButton.Parent = mainFrame
+
+local espCorner = Instance.new("UICorner")
+espCorner.CornerRadius = UDim.new(0, 4)
+espCorner.Parent = espButton
+
+local randomViewButton = Instance.new("TextButton")
+randomViewButton.Name = "RandomViewButton"
+randomViewButton.Size = UDim2.new(0.435, 0, 0, 20)
+randomViewButton.Position = UDim2.new(0.515, 0, 0, 163)
+randomViewButton.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
+randomViewButton.Text = "🎥 VIEW : OFF"
+randomViewButton.TextColor3 = Color3.fromRGB(210, 160, 200)
+randomViewButton.Font = Enum.Font.GothamMedium
+randomViewButton.TextSize = 8
+randomViewButton.ZIndex = mainFrame.ZIndex + 1
+randomViewButton.Parent = mainFrame
+
+local randomViewCorner = Instance.new("UICorner")
+randomViewCorner.CornerRadius = UDim.new(0, 4)
+randomViewCorner.Parent = randomViewButton
+
+local antiCrashButton = Instance.new("TextButton")
+antiCrashButton.Name = "AntiCrashButton"
+antiCrashButton.Size = UDim2.new(0.435, 0, 0, 20)
+antiCrashButton.Position = UDim2.new(0.05, 0, 0, 186)
+antiCrashButton.BackgroundColor3 = Color3.fromRGB(50, 20, 20)
+antiCrashButton.Text = "🛡\239\184\143 CRASH : OFF"
+antiCrashButton.TextColor3 = Color3.fromRGB(255, 90, 90)
+antiCrashButton.Font = Enum.Font.GothamMedium
+antiCrashButton.TextSize = 7.5
+antiCrashButton.ZIndex = mainFrame.ZIndex + 1
+antiCrashButton.Parent = mainFrame
+
+local antiCrashCorner = Instance.new("UICorner")
+antiCrashCorner.CornerRadius = UDim.new(0, 4)
+antiCrashCorner.Parent = antiCrashButton
+
+local antiCrashStroke = Instance.new("UIStroke")
+antiCrashStroke.Thickness = 1
+antiCrashStroke.Color = Color3.fromRGB(110, 35, 35)
+antiCrashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+antiCrashStroke.Parent = antiCrashButton
+
+local antiPauseButton = Instance.new("TextButton")
+antiPauseButton.Name = "AntiPauseButton"
+antiPauseButton.Size = UDim2.new(0.435, 0, 0, 20)
+antiPauseButton.Position = UDim2.new(0.515, 0, 0, 186)
+antiPauseButton.BackgroundColor3 = Color3.fromRGB(50, 20, 20)
+antiPauseButton.Text = "⏸\239\184\143 PAUSE : OFF"
+antiPauseButton.TextColor3 = Color3.fromRGB(255, 90, 90)
+antiPauseButton.Font = Enum.Font.GothamMedium
+antiPauseButton.TextSize = 7.5
+antiPauseButton.ZIndex = mainFrame.ZIndex + 1
+antiPauseButton.Parent = mainFrame
+
+local antiPauseCorner = Instance.new("UICorner")
+antiPauseCorner.CornerRadius = UDim.new(0, 4)
+antiPauseCorner.Parent = antiPauseButton
+
+local remoteStatusLabel = Instance.new("TextLabel")
+remoteStatusLabel.Name = "RemoteStatusLabel"
+remoteStatusLabel.Size = UDim2.new(0.9, 0, 0, 12)
+remoteStatusLabel.Position = UDim2.new(0.05, 0, 0, 209)
+remoteStatusLabel.BackgroundTransparency = 1
+remoteStatusLabel.Text = "Remote Filter: Listening... 📡"
+remoteStatusLabel.TextColor3 = Color3.fromRGB(180, 160, 150)
+remoteStatusLabel.Font = Enum.Font.Gotham
+remoteStatusLabel.TextSize = 7.5
+remoteStatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+remoteStatusLabel.ZIndex = mainFrame.ZIndex + 1
+remoteStatusLabel.Parent = mainFrame
+
+local rejoinButton = Instance.new("TextButton")
+rejoinButton.Name = "RejoinButton"
+rejoinButton.Size = UDim2.new(0.9, 0, 0, 20)
+rejoinButton.Position = UDim2.new(0.05, 0, 0, 224)
+rejoinButton.BackgroundColor3 = Color3.fromRGB(80, 25, 30)
+rejoinButton.Text = "🔄 REJOIN"
+rejoinButton.TextColor3 = Color3.fromRGB(255, 180, 180)
+rejoinButton.Font = Enum.Font.GothamMedium
+rejoinButton.TextSize = 8.5
+rejoinButton.ZIndex = mainFrame.ZIndex + 1
+rejoinButton.Parent = mainFrame
+
+local rejoinCorner = Instance.new("UICorner")
+rejoinCorner.CornerRadius = UDim.new(0, 4)
+rejoinCorner.Parent = rejoinButton
+
+local rejoinSubText = Instance.new("TextLabel")
+rejoinSubText.Name = "RejoinSubText"
+rejoinSubText.Size = UDim2.new(0.9, 0, 0, 12)
+rejoinSubText.Position = UDim2.new(0.05, 0, 0, 246)
+rejoinSubText.BackgroundTransparency = 1
+rejoinSubText.Text = "Rejoin to remove the feature"
+rejoinSubText.TextColor3 = Color3.fromRGB(180, 150, 150)
+rejoinSubText.Font = Enum.Font.Gotham
+rejoinSubText.TextSize = 7.5
+rejoinSubText.TextXAlignment = Enum.TextXAlignment.Center
+rejoinSubText.ZIndex = mainFrame.ZIndex + 1
+rejoinSubText.Parent = mainFrame
+
+local playerSidePanel = Instance.new("Frame")
+playerSidePanel.Name = "PlayerSidePanel"
+playerSidePanel.Size = UDim2.new(0, 0, 1, 0)
+playerSidePanel.Position = UDim2.new(0, 0, 0, 0)
+playerSidePanel.BackgroundColor3 = Color3.fromRGB(16, 12, 16)
+playerSidePanel.BorderSizePixel = 0
+playerSidePanel.ClipsDescendants = true
+playerSidePanel.Visible = false
+playerSidePanel.Parent = mainFrame
+
+local sidePanelCorner = Instance.new("UICorner")
+sidePanelCorner.CornerRadius = UDim.new(0, 7)
+sidePanelCorner.Parent = playerSidePanel
+
+local sidePanelStroke = Instance.new("UIStroke")
+sidePanelStroke.Thickness = 1.3
+sidePanelStroke.Color = Color3.fromRGB(255, 120, 0)
+sidePanelStroke.Parent = playerSidePanel
+
+local playerSideTitle = Instance.new("TextLabel")
+playerSideTitle.Name = "PlayerSideTitle"
+playerSideTitle.Size = UDim2.new(1, -10, 0, 18)
+playerSideTitle.Position = UDim2.new(0, 5, 0, 3)
+playerSideTitle.BackgroundTransparency = 1
+playerSideTitle.Text = "👤 TELEPORT PLAYER"
+playerSideTitle.TextColor3 = Color3.fromRGB(255, 210, 190)
+playerSideTitle.Font = Enum.Font.GothamBold
+playerSideTitle.TextSize = 8.5
+playerSideTitle.TextXAlignment = Enum.TextXAlignment.Center
+playerSideTitle.Parent = playerSidePanel
+
+local playerSearchInput = Instance.new("TextBox")
+playerSearchInput.Name = "PlayerSearchInput"
+playerSearchInput.Size = UDim2.new(1, -10, 0, 18)
+playerSearchInput.Position = UDim2.new(0, 5, 0, 22)
+playerSearchInput.BackgroundColor3 = Color3.fromRGB(25, 18, 22)
+playerSearchInput.Font = Enum.Font.Gotham
+playerSearchInput.PlaceholderText = "🔍 Cari player..."
+playerSearchInput.Text = ""
+playerSearchInput.TextColor3 = Color3.fromRGB(255, 230, 220)
+playerSearchInput.TextSize = 8.5
+playerSearchInput.Parent = playerSidePanel
+
+local playerSearchCorner = Instance.new("UICorner")
+playerSearchCorner.CornerRadius = UDim.new(0, 4)
+playerSearchCorner.Parent = playerSearchInput
+
+local playerScroll = Instance.new("ScrollingFrame")
+playerScroll.Name = "PlayerScroll"
+playerScroll.Size = UDim2.new(1, -6, 1, -44)
+playerScroll.Position = UDim2.new(0, 3, 0, 42)
+playerScroll.BackgroundTransparency = 1
+playerScroll.BorderSizePixel = 0
+playerScroll.ScrollBarThickness = 2
+playerScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
+playerScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+playerScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerScroll.Parent = playerSidePanel
+
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.Parent = playerScroll
+playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+playerListLayout.Padding = UDim.new(0, 3)
+
+local isPlayerPanelOpen = false
+
+local function closePlayerPanel(animate)
+    isPlayerPanelOpen = false
+    teleportPlayerMenuButton.BackgroundColor3 = Color3.fromRGB(40, 22, 28)
+    teleportPlayerMenuButton.TextColor3 = Color3.fromRGB(230, 180, 190)
+    teleportPlayerMenuButton.Text = "👤 TELEPORT PLAYER ◀"
+
+    if animate then
+        local tween = TweenService:Create(playerSidePanel, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(0, 0, 1, 0)
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not isPlayerPanelOpen then
+                playerSidePanel.Visible = false
+            end
+        end)
+        return
+    end
+
+    playerSidePanel.Position = UDim2.new(0, 0, 0, 0)
+    playerSidePanel.Size = UDim2.new(0, 0, 1, 0)
+    playerSidePanel.Visible = false
+end
+
+local function rebuildPlayerList(searchText)
+    for _, child in ipairs(playerScroll:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local query = string.lower(searchText or "")
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local nameMatch = string.find(string.lower(player.Name), query, 1, true)
+            local displayMatch = string.find(string.lower(player.DisplayName), query, 1, true)
+            local shouldShow = query == "" or nameMatch or displayMatch
+
+            if shouldShow then
+                local row = Instance.new("Frame")
+                row.Name = player.Name .. "_Row"
+                row.Size = UDim2.new(1, -4, 0, 20)
+                row.BackgroundTransparency = 1
+                row.Parent = playerScroll
+
+                local tpButton = Instance.new("TextButton")
+                tpButton.Name = "TPBtn"
+                tpButton.Size = UDim2.new(1, -28, 1, 0)
+                tpButton.Position = UDim2.new(0, 0, 0, 0)
+                tpButton.BackgroundColor3 = Color3.fromRGB(30, 20, 25)
+                tpButton.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+                tpButton.TextColor3 = Color3.fromRGB(240, 210, 200)
+                tpButton.Font = Enum.Font.GothamMedium
+                tpButton.TextSize = 7.5
+                tpButton.TextTruncate = Enum.TextTruncate.AtEnd
+                tpButton.Parent = row
+
+                local tpCorner = Instance.new("UICorner")
+                tpCorner.CornerRadius = UDim.new(0, 4)
+                tpCorner.Parent = tpButton
+
+                local tpStroke = Instance.new("UIStroke")
+                tpStroke.Thickness = 1
+                tpStroke.Color = Color3.fromRGB(90, 40, 30)
+                tpStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                tpStroke.Parent = tpButton
+
+                local viewButton = Instance.new("TextButton")
+                viewButton.Name = "ViewBtn"
+                viewButton.Size = UDim2.new(0, 24, 1, 0)
+                viewButton.Position = UDim2.new(1, -24, 0, 0)
+                viewButton.BackgroundColor3 = Color3.fromRGB(45, 20, 25)
+                viewButton.Text = "👁\239\184\143"
+                viewButton.TextColor3 = Color3.fromRGB(255, 140, 0)
+                viewButton.Font = Enum.Font.GothamBold
+                viewButton.TextSize = 9.5
+                viewButton.Parent = row
+
+                local viewCorner = Instance.new("UICorner")
+                viewCorner.CornerRadius = UDim.new(0, 4)
+                viewCorner.Parent = viewButton
+
+                local viewStroke = Instance.new("UIStroke")
+                viewStroke.Thickness = 1
+                viewStroke.Color = Color3.fromRGB(120, 40, 25)
+                viewStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                viewStroke.Parent = viewButton
+
+                tpButton.Activated:Connect(function()
+                    local myCharacter = LocalPlayer.Character
+                    if myCharacter then
+                        myCharacter = myCharacter:FindFirstChild("HumanoidRootPart") or (myCharacter:FindFirstChild("Torso") or myCharacter.PrimaryPart)
+                    end
+
+                    local targetCharacter = player.Character
+                    local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart") or (targetCharacter:FindFirstChild("Torso") or targetCharacter.PrimaryPart)
+
+                    if myCharacter and targetRoot then
+                        myCharacter.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "TELEPORT PLAYER",
+                            Text = "Berjaya teleport ke: " .. player.DisplayName,
+                            Duration = 3
+                        })
+                        return
+                    end
+
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "TELEPORT GAGAL",
+                        Text = "Pemain sasaran tiada dalam permainan!",
+                        Duration = 3
+                    })
+                end)
+
+                viewButton.Activated:Connect(function()
+                    local camera = Workspace.CurrentCamera
+                    if not camera then
+                        return
+                    end
+
+                    local targetHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+                    local myHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+                    if targetHumanoid == camera.CameraSubject then
+                        if myHumanoid then
+                            camera.CameraSubject = myHumanoid
+                        end
+
+                        viewButton.BackgroundColor3 = Color3.fromRGB(45, 20, 25)
+                        viewButton.TextColor3 = Color3.fromRGB(255, 140, 0)
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "VIEW PLAYER",
+                            Text = "Kamera kembali ke avatar sendiri.",
+                            Duration = 3
+                        })
+                        return
+                    end
+
+                    if targetHumanoid then
+                        camera.CameraSubject = targetHumanoid
+                        viewButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+                        viewButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "VIEW PLAYER",
+                            Text = "Sedang melihat: " .. player.DisplayName .. " (@" .. player.Name .. ")",
+                            Duration = 3
+                        })
+                        return
+                    end
+
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "VIEW GAGAL",
+                        Text = "Avatar pemain tidak ditemui!",
+                        Duration = 3
+                    })
+                end)
+            end
+        end
+    end
+end
+
+teleportPlayerMenuButton.Activated:Connect(function()
+    isPlayerPanelOpen = not isPlayerPanelOpen
+
+    if isPlayerPanelOpen then
+        rebuildPlayerList(playerSearchInput.Text)
+        playerSidePanel.Visible = true
+        teleportPlayerMenuButton.BackgroundColor3 = Color3.fromRGB(120, 30, 35)
+        teleportPlayerMenuButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        teleportPlayerMenuButton.Text = "👤 TELEPORT PLAYER ▼"
+
+        TweenService:Create(playerSidePanel, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0, -180, 0, 0),
+            Size = UDim2.new(0, 175, 1, 0)
+        }):Play()
+        return
+    end
+
+    closePlayerPanel(true)
+end)
+
+playerSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    if isPlayerPanelOpen then
+        rebuildPlayerList(playerSearchInput.Text)
+    end
+end)
+
+Players.PlayerAdded:Connect(function()
+    if isPlayerPanelOpen then
+        rebuildPlayerList(playerSearchInput.Text)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function()
+    if isPlayerPanelOpen then
+        rebuildPlayerList(playerSearchInput.Text)
+    end
+end)
+
+local isDragging = false
+local dragInputObject
+local dragStartPosition
+local dragStartFramePosition
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = true
+        dragStartPosition = input.Position
+        dragStartFramePosition = mainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                isDragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputObject = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInputObject and isDragging then
+        local delta = input.Position - dragStartPosition
+        mainFrame.Position = UDim2.new(
+            dragStartFramePosition.X.Scale,
+            dragStartFramePosition.X.Offset + delta.X,
+            dragStartFramePosition.Y.Scale,
+            dragStartFramePosition.Y.Offset + delta.Y
+        )
+    end
+end)
+
+local isMinimized = false
+
+local function setControlsVisible(visible)
+    destroyModeButton.Visible = visible
+    normalModeButton.Visible = visible
+    autoModeButton.Visible = visible
+    limitButton.Visible = visible
+    spamButton.Visible = visible
+    walkSpeedInput.Visible = visible
+    walkSpeedButton.Visible = visible
+    teleportSpawnButton.Visible = visible
+    teleportPlayerMenuButton.Visible = visible
+    espButton.Visible = visible
+    randomViewButton.Visible = visible
+    antiCrashButton.Visible = visible
+    antiPauseButton.Visible = visible
+    remoteStatusLabel.Visible = visible
+    rejoinButton.Visible = visible
+    rejoinSubText.Visible = visible
+end
+
+minimizeButton.Activated:Connect(function()
+    isMinimized = not isMinimized
+
+    local targetSize = isMinimized and UDim2.new(0, 210, 0, 22) or UDim2.new(0, 210, 0, 268)
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+    if isMinimized then
+        minimizeButton.Text = "+"
+        if isPlayerPanelOpen then
+            playerSidePanel.Visible = false
+        end
+        setControlsVisible(false)
+        TweenService:Create(mainFrame, tweenInfo, {Size = targetSize}):Play()
+        return
+    end
+
+    minimizeButton.Text = "-"
+    local tween = TweenService:Create(mainFrame, tweenInfo, {Size = targetSize})
+    tween:Play()
+    tween.Completed:Connect(function()
+        if not isMinimized then
+            setControlsVisible(true)
+            if isPlayerPanelOpen then
+                playerSidePanel.Visible = true
+            end
+        end
+    end)
+end)
+
+local pianoConfig = {
+    PianoSoundRange = 9999999,
+    KeyAesthetics = true,
+    PianoSounds = {
+        "233836579",
+        "233844049",
+        "233845680",
+        "233852841",
+        "233854135",
+        "233856105"
+    }
+}
+
+local foodNames = {
+    "Bread",
+    "Apple",
+    "Burger",
+    "Cake",
+    "Cookie",
+    "Croissant",
+    "Sourdough",
+    "Broken Rod"
+}
+
+local remotePathList = {
+    "ReplicatedStorage.NexusVRCharacterModel.ReplicationReady",
+    "ReplicatedStorage.AdminRemotes.Utility.Announcement",
+    "ReplicatedStorage.AdminRemotes.Utility.BannedUsers",
+    "ReplicatedStorage.AdminRemotes.AdminAccess",
+    "ReplicatedStorage.AdminRemotes.PanelToggle",
+    "ReplicatedStorage.AdminRemotes.CommandUse",
+    "ReplicatedStorage.Tools.Apple.eat",
+    "ReplicatedStorage.Tools.Bread.eat",
+    "ReplicatedStorage.Tools.Burger.eat",
+    "ReplicatedStorage.Tools.Cake.eat",
+    "ReplicatedStorage.Tools.Cookie.eat",
+    "ReplicatedStorage.Tools.Croissant.eat",
+    "ReplicatedStorage.Tools.Sourdough.eat",
+    "ReplicatedStorage.Tools.Broken Rod.eat",
+    "ReplicatedStorage.BoothEvents.Claimed",
+    "ReplicatedStorage.BoothEvents.Unclaimed",
+    "ReplicatedStorage.BoothEvents.OpenGUI",
+    "ReplicatedStorage.BoothEvents.ChangeText",
+    "ReplicatedStorage.Fishing_System.Remotes.EquippedRod",
+    "ReplicatedStorage.Fishing_System.Remotes.UnEquippedRod",
+    "ReplicatedStorage.Fishing_System.Remotes.FishCatched",
+    "ReplicatedStorage.Fishing_System.Remotes.FishingTask",
+    "ReplicatedStorage.Fishing_System.Remotes.FinalTask",
+    "ReplicatedStorage.Fishing_System.Remotes.BugFixer",
+    "ReplicatedStorage.DeviceTypeRemote",
+    "ReplicatedStorage.NoTool",
+    "ReplicatedStorage.GetServerList",
+    "ReplicatedStorage.ReputationRemotes.RequestProfile",
+    "ReplicatedStorage.ReputationRemotes.SubmitVote",
+    "ReplicatedStorage.ReputationRemotes.NotifyRated",
+    "ReplicatedStorage.ToggleSpeed"
+}
+
+local function resolveInstancePath(path)
+    local parts = string.split(path, ".")
+    local current = game
+
+    for i = 2, #parts do
+        current = current:FindFirstChild(parts[i])
+        if not current then
+            return nil
+        end
+    end
+
+    return current
+end
+
+local function showNotification(title, text)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 3
+    })
+end
+
+local deviceTypeRemote = ReplicatedStorage:WaitForChild("DeviceTypeRemote", 5)
+
+local isSpamming = false
+local isAutoMode = false
+local isLimitEnabled = false
+local spamGeneration = 0
+local spamMode = "NORMAL"
+local isAntiCrashEnabled = false
+local isEspEnabled = false
+local isAntiPauseEnabled = false
+local isWalkSpeedEnabled = false
+local isRandomViewEnabled = false
+local isPauseEnabled = false
+
+local totalSent = 0
+local sentThisSecond = 0
+local currentSpamStartTick = 0
+
+local function updateStatsLabel()
+    if not topStatsLabel or not topStatsLabel.Parent then
+        return
+    end
+
+    if isSpamming and sentThisSecond > 0 then
+        topStatsLabel.Text = string.format(
+            "<font color='#00FFAA'>⚡ SENT: %d</font>  <font color='#888888'>|</font>  <font color='#FF8C00'>RATE: %s</font> <font color='#00E5FF'>(%d/s)</font>",
+            totalSent,
+            "UNLIMITED ♾\239\184\143",
+            sentThisSecond
+        )
+        return
+    end
+
+    topStatsLabel.Text = string.format(
+        "<font color='#00FFAA'>⚡ SENT: %d</font>  <font color='#888888'>|</font>  <font color='#FF8C00'>RATE: %s</font>",
+        totalSent,
+        "UNLIMITED ♾\239\184\143"
+    )
+end
+
+destroyModeButton.Activated:Connect(function()
+    spamMode = "DESTROY"
+    destroyModeButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+    destroyModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    destroyModeStroke.Color = Color3.fromRGB(255, 140, 0)
+    normalModeButton.BackgroundColor3 = Color3.fromRGB(30, 20, 25)
+    normalModeButton.TextColor3 = Color3.fromRGB(210, 160, 150)
+    normalModeStroke.Color = Color3.fromRGB(90, 40, 30)
+    showNotification("SPAM MODE", "Mod DESTROY (Ultra Pantas) Dipilih!")
+    updateStatsLabel()
+end)
+
+normalModeButton.Activated:Connect(function()
+    spamMode = "NORMAL"
+    normalModeButton.BackgroundColor3 = Color3.fromRGB(200, 90, 10)
+    normalModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    normalModeStroke.Color = Color3.fromRGB(255, 200, 50)
+    destroyModeButton.BackgroundColor3 = Color3.fromRGB(30, 20, 25)
+    destroyModeButton.TextColor3 = Color3.fromRGB(210, 160, 150)
+    destroyModeStroke.Color = Color3.fromRGB(90, 40, 30)
+    showNotification("SPAM MODE", "Mod UNLIMITED (Kelajuan Stabil) Dipilih!")
+    updateStatsLabel()
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        sentThisSecond = 0
+        updateStatsLabel()
+    end
+end)
+
+local function teleportToTarget(targetProvider, mapName)
+    local character = LocalPlayer.Character
+    if not character then
+        return
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        rootPart = character:FindFirstChild("Torso") or character.PrimaryPart
+    end
+
+    local ok, result = pcall(targetProvider)
+    if ok and result then
+        local targetCFrame
+        if result:IsA("BasePart") then
+            targetCFrame = result.CFrame
+        elseif result:IsA("Model") then
+            targetCFrame = result:GetPivot()
+        end
+
+        if rootPart and targetCFrame then
+            rootPart.CFrame = targetCFrame + Vector3.new(0, 1.5, 0)
+        end
+
+        if (result:IsA("Seat") or result:IsA("VehicleSeat")) and humanoid then
+            result:Sit(humanoid)
+            showNotification("AUTO SEAT ✅", "Map: " .. mapName .. "\nBerjaya duduk!")
+            return
+        end
+
+        if targetCFrame and rootPart then
+            showNotification("AUTO SEAT ✅", "Map: " .. mapName .. "\nBerjaya teleport!")
+            return
+        end
+
+        showNotification("TELEPORT GAGAL", "Gagal membaca kedudukan: " .. mapName)
+        return
+    end
+
+    showNotification("TELEPORT GAGAL", mapName .. " tidak dijumpai!")
+end
+
+local cachedMapName
+local cachedSeatProvider
+
+local function detectMapAndSeat()
+    if cachedSeatProvider then
+        return cachedMapName or "Detected Map", cachedSeatProvider
+    end
+
+    local mapName
+    local seatProvider
+
+    local greenHouse = Workspace:FindFirstChild("GreenHouse")
+    if not greenHouse then
+        greenHouse = Workspace:FindFirstChild("Piano") and (Workspace.Piano:FindFirstChild("Bench") and not Workspace:FindFirstChild("stage"))
+    end
+
+    if greenHouse then
+        mapName = "Hutan / Malaysia VC"
+        seatProvider = function()
+            local house = Workspace:FindFirstChild("GreenHouse")
+            if house then
+                for _, child in ipairs(house:GetChildren()) do
+                    if child.Name == "Gamepass" or child.Name == "PremiumDetection" then
+                        child:Destroy()
+                    end
+                end
+            end
+            return Workspace.Piano.Bench.Seat
+        end
+    elseif Workspace:FindFirstChild("stage") and Workspace.stage:FindFirstChild("Piano") then
+        seatProvider = function()
+            return Workspace.stage.Piano.Bench.Seat
+        end
+        mapName = "Danau Voice Chat"
+    elseif Workspace:FindFirstChild("MapContent") and Workspace.MapContent:FindFirstChild("Decoration") then
+        mapName = "Indo Hangout"
+        seatProvider = function()
+            return Workspace.MapContent.Decoration.Piano:GetChildren()[4].Bench.Seat
+        end
+    elseif Workspace:FindFirstChild("Keyboard") then
+        mapName = "Pantai Voice Chat"
+        seatProvider = function()
+            if Workspace.Keyboard:FindFirstChild("Bench") and Workspace.Keyboard.Bench:FindFirstChild("Seat") then
+                return Workspace.Keyboard.Bench.Seat
+            end
+            return Workspace.Keyboard.Bench.Seat
+        end
+    elseif Workspace:FindFirstChild("Cafe") then
+        mapName = "Moonhug"
+        seatProvider = function()
+            return Workspace.Cafe:GetChildren()[37]
+        end
+    elseif Workspace:FindFirstChild("New GUi Piano") then
+        mapName = "Sad Hills"
+        seatProvider = function()
+            return Workspace["New GUi Piano"].Bench.Seat
+        end
+    elseif Workspace:FindFirstChild("Piano Bundle") then
+        mapName = "Piano Bundle"
+        seatProvider = function()
+            local bundle = Workspace["Piano Bundle"]
+            if bundle:FindFirstChild("Keyboard") and bundle.Keyboard:FindFirstChild("Bench") then
+                return bundle.Keyboard.Bench.Seat
+            end
+            if bundle:FindFirstChild("Piano") and bundle.Piano:FindFirstChild("Bench") then
+                return bundle.Piano.Bench.Seat
+            end
+            return bundle:FindFirstChildOfClass("Seat")
+        end
+    end
+
+    if not seatProvider then
+        local universalSeat = Workspace:FindFirstChildWhichIsA("Seat", true) or Workspace:FindFirstChildWhichIsA("VehicleSeat", true)
+        if universalSeat then
+            mapName = "Universal Seat"
+            seatProvider = function()
+                return universalSeat
+            end
+        end
+    end
+
+    cachedMapName = mapName or "Unknown Map"
+    cachedSeatProvider = seatProvider
+    return cachedMapName, cachedSeatProvider
+end
+
+local function autoScanAndSit()
+    local mapName, seatProvider = detectMapAndSeat()
+
+    if seatProvider then
+        teleportToTarget(seatProvider, mapName)
+        return
+    end
+
+    showNotification("MAP DIKESAN 🗺\239\184\143", "Nama Map: " .. mapName .. "\n(Seat automatik tidak dijumpai)")
+end
+
+autoModeButton.Activated:Connect(function()
+    isAutoMode = not isAutoMode
+
+    if isAutoMode then
+        autoModeButton.Text = "AUTO: ON"
+        autoModeButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+        autoModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        autoModeStroke.Color = Color3.fromRGB(255, 140, 0)
+        showNotification("AUTO MODE", "Mod Auto diaktifkan! (Menyokong mod Unlimited & Destroy)")
+        return
+    end
+
+    autoModeButton.Text = "AUTO: OFF"
+    autoModeButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+    autoModeButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+    autoModeStroke.Color = Color3.fromRGB(90, 40, 30)
+    showNotification("AUTO MODE", "Mod Auto dimatikan. (Spam berjalan secara manual)")
+
+    if isSpamming and spamMode == "NORMAL" then
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+        if not (humanoid and humanoid.Sit) then
+            isSpamming = false
+            spamGeneration += 1
+            spamButton.Text = "SPAM : OFF"
+            spamButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+            spamButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+            spamStroke.Color = Color3.fromRGB(90, 40, 30)
+            updateStatsLabel()
+            showNotification("SPAM MATI ⚠\239\184\143", "Butang Auto dimatikan dan avatar tidak duduk!")
+        end
+    end
+end)
+
+local enableAntiCrash
+
+local function checkLimit()
+    if isLimitEnabled and isSpamming and totalSent >= 8700000 then
+        isSpamming = false
+        spamGeneration += 1
+        task.defer(function()
+            spamButton.Text = "SPAM : OFF"
+            spamButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+            spamButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+            spamStroke.Color = Color3.fromRGB(90, 40, 30)
+
+            if not isAntiCrashEnabled and enableAntiCrash then
+                enableAntiCrash()
+            end
+
+            updateStatsLabel()
+            showNotification("HAD TERCAPAI 🛑", "8,700,000 Sent Remote dicapai!\nSpam dimatikan & Anti Crash diaktifkan.")
+        end)
+        return true
+    end
+    return false
+end
+
+limitButton.Activated:Connect(function()
+    isLimitEnabled = not isLimitEnabled
+
+    if isLimitEnabled then
+        limitButton.Text = "LIMIT: ON"
+        limitButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+        limitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        limitStroke.Color = Color3.fromRGB(255, 140, 0)
+        showNotification("LIMIT AKTIF 🎯", "Had 8,700,000 remote aktif!\nAnti Crash auto-ON bila capai had.")
+        checkLimit()
+        return
+    end
+
+    limitButton.Text = "LIMIT: OFF"
+    limitButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+    limitButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+    limitStroke.Color = Color3.fromRGB(90, 40, 30)
+    showNotification("LIMIT MATI", "Had remote dimatikan.")
+end)
+
+spamButton.Activated:Connect(function()
+    if not isSpamming and (not isAutoMode and spamMode == "NORMAL") then
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+        if not humanoid or not humanoid.Sit then
+            showNotification("SPAM DISEKAT ⚠\239\184\143", "Spam Unlimited Manual memerlukan avatar duduk, atau aktifkan butang AUTO!")
+            return
+        end
+    end
+
+    isSpamming = not isSpamming
+
+    if isSpamming then
+        currentSpamStartTick = tick()
+
+        if isAutoMode then
+            task.spawn(autoScanAndSit)
+            showNotification("ZAYVOR LS", "Spam Aktif bersama Auto Scan Map! (" .. spamMode .. ")")
+        else
+            showNotification("ZAYVOR LS", "Spam Manual Aktif! (" .. spamMode .. ")")
+        end
+
+        spamButton.Text = "SPAM : ON"
+        spamButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+        spamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        spamStroke.Color = Color3.fromRGB(255, 140, 0)
+        checkLimit()
+    else
+        spamGeneration += 1
+        spamButton.Text = "SPAM : OFF"
+        spamButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+        spamButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+        spamStroke.Color = Color3.fromRGB(90, 40, 30)
+        showNotification("ZAYVOR LS", "Spam dihentikan serta-merta.")
+    end
+
+    updateStatsLabel()
+end)
+
+RunService.Heartbeat:Connect(function()
+    if isSpamming and (spamMode == "NORMAL" and tick() - currentSpamStartTick > 3) then
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+        if not humanoid or not humanoid.Sit then
+            isSpamming = false
+            spamGeneration += 1
+            spamButton.Text = "SPAM : OFF"
+            spamButton.BackgroundColor3 = Color3.fromRGB(28, 18, 22)
+            spamButton.TextColor3 = Color3.fromRGB(190, 130, 120)
+            spamStroke.Color = Color3.fromRGB(90, 40, 30)
+            updateStatsLabel()
+            showNotification("SPAM MATI ⚠\239\184\143", "Avatar bangun dari tempat duduk! Spam dimatikan.")
+        end
+    end
+end)
+
+local storedProperties = {}
+local activeAntiCrashConnections = {}
+local isAntiCrashMonitorActive = false
+
+local function handleIncomingDescendant(descendant)
+    if not isAntiCrashEnabled then
+        return
+    end
+
+    if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+        if not storedProperties[descendant] then
+            storedProperties[descendant] = {Parent = descendant.Parent}
+        end
+        task.defer(function()
+            pcall(function()
+                descendant.Parent = nil
+            end)
+        end)
+        return
+    end
+
+    if descendant:IsA("ParticleEmitter") or descendant:IsA("Explosion") or descendant:IsA("Sparkles") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
+        task.defer(function()
+            pcall(function()
+                descendant:Destroy()
+            end)
+        end)
+        return
+    end
+
+    if descendant:IsA("BasePart") then
+        pcall(function()
+            local size = descendant.Size
+            if size.X ~= size.X or size.X > 5000 or size.Y > 5000 or size.Z > 5000 then
+                descendant:Destroy()
+            end
+        end)
+    end
+end
+
+enableAntiCrash = function()
+    isAntiCrashEnabled = true
+    isAntiCrashMonitorActive = true
+    antiCrashButton.Text = "🛡\239\184\143 CRASH : ON"
+    antiCrashButton.BackgroundColor3 = Color3.fromRGB(180, 40, 10)
+    antiCrashButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    antiCrashStroke.Color = Color3.fromRGB(255, 140, 0)
+    remoteStatusLabel.Text = "Shield: FULL ANTI-CRASH ACTIVE 🛡\239\184\143"
+    remoteStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 170)
+
+    for _, descendant in pairs(game:GetDescendants()) do
+        if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+            if not storedProperties[descendant] then
+                storedProperties[descendant] = {Parent = descendant.Parent}
+            end
+            task.defer(function()
+                pcall(function()
+                    descendant.Parent = nil
+                end)
+            end)
+        elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Explosion") or descendant:IsA("Sparkles") then
+            task.defer(function()
+                pcall(function()
+                    descendant:Destroy()
+                end)
+            end)
+        end
+    end
+
+    for _, descendant in pairs(Workspace:GetDescendants()) do
+        if not isAntiCrashEnabled then
+            break
+        end
+
+        if descendant:IsA("BasePart") and not descendant:IsA("MeshPart") then
+            if not storedProperties[descendant] then
+                storedProperties[descendant] = {
+                    Material = descendant.Material,
+                    CastShadow = descendant.CastShadow
+                }
+            end
+            descendant.Material = Enum.Material.SmoothPlastic
+            descendant.CastShadow = false
+        elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+            if not storedProperties[descendant] then
+                storedProperties[descendant] = {Transparency = descendant.Transparency}
+            end
+            descendant.Transparency = 1
+        end
+    end
+
+    if not storedProperties[Lighting] then
+        storedProperties[Lighting] = {
+            GlobalShadows = Lighting.GlobalShadows,
+            Outlines = Lighting.Outlines
+        }
+    end
+
+    Lighting.GlobalShadows = false
+    Lighting.Outlines = false
+
+    activeAntiCrashConnections.DescendantAdded = game.DescendantAdded:Connect(handleIncomingDescendant)
+
+    activeAntiCrashConnections.HeartbeatPhysics = RunService.Heartbeat:Connect(function()
+        if not isAntiCrashEnabled then
+            return
+        end
+
+        local character = LocalPlayer.Character
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart") or (character:FindFirstChild("Torso") or character.PrimaryPart)
+
+            if rootPart then
+                local linearVelocity = rootPart.AssemblyLinearVelocity
+                local angularVelocity = rootPart.AssemblyAngularVelocity
+
+                if linearVelocity.X ~= linearVelocity.X or linearVelocity.Magnitude > 350 then
+                    rootPart.AssemblyLinearVelocity = Vector3.zero
+                end
+
+                if angularVelocity.X ~= angularVelocity.X or angularVelocity.Magnitude > 350 then
+                    rootPart.AssemblyAngularVelocity = Vector3.zero
+                end
+
+                local position = rootPart.Position
+                if position.X ~= position.X or math.abs(position.X) > 1000000 then
+                    rootPart.CFrame = CFrame.new(0, 50, 0)
+                end
+            end
+        end
+
+        local camera = Workspace.CurrentCamera
+        if camera then
+            local camPos = camera.CFrame.Position
+            if camPos.X ~= camPos.X then
+                camera.CFrame = CFrame.new(0, 10, 0)
+            end
+        end
+    end)
+
+    local monitorStart = tick()
+    activeAntiCrashConnections.EmergencyMonitor = RunService.RenderStepped:Connect(function()
+        if not isAntiCrashEnabled then
+            return
+        end
+        if tick() - monitorStart > 0.4 then
+            pcall(function()
+                for _, child in ipairs(Workspace:GetChildren()) do
+                    if child:IsA("BasePart") and (not child.Anchored and child:GetMass() < 5) then
+                        child:Destroy()
+                    end
+                end
+            end)
+        end
+    end)
+
+    task.spawn(function()
+        while isAntiCrashEnabled and isAntiCrashMonitorActive do
+            pcall(function()
+                collectgarbage("step", 250)
+            end)
+            task.wait(5)
+        end
+    end)
+
+    showNotification("ANTI CRASH 🛡\239\184\143", "Sistem Pertahanan Aktif:\n• Emergency • Replication • Physics\n• Remote Flood • Memory • Engine")
+end
+
+local function disableAntiCrash()
+    isAntiCrashEnabled = false
+    isAntiCrashMonitorActive = false
+    antiCrashButton.Text = "🛡\239\184\143 CRASH : OFF"
+    antiCrashButton.BackgroundColor3 = Color3.fromRGB(50, 20, 20)
+    antiCrashButton.TextColor3 = Color3.fromRGB(255, 90, 90)
+    antiCrashStroke.Color = Color3.fromRGB(110, 35, 35)
+    remoteStatusLabel.Text = "Remote Filter: Listening... 📡"
+    remoteStatusLabel.TextColor3 = Color3.fromRGB(180, 160, 150)
+
+    for key, connection in pairs(activeAntiCrashConnections) do
+        if connection then
+            connection:Disconnect()
+            activeAntiCrashConnections[key] = nil
+        end
+    end
+
+    for instance, data in pairs(storedProperties) do
+        if instance then
+            pcall(function()
+                if data.Parent then
+                    instance.Parent = data.Parent
+                end
+                if data.Material then
+                    instance.Material = data.Material
+                end
+                if data.CastShadow ~= nil then
+                    instance.CastShadow = data.CastShadow
+                end
+                if data.Transparency then
+                    instance.Transparency = data.Transparency
+                end
+            end)
+        end
+    end
+
+    if storedProperties[Lighting] then
+        Lighting.GlobalShadows = storedProperties[Lighting].GlobalShadows
+        Lighting.Outlines = storedProperties[Lighting].Outlines
+    end
+
+    table.clear(storedProperties)
+    showNotification("ANTI CRASH 🛡\239\184\143", "Sistem Pertahanan Dimatikan.")
+end
+
+antiCrashButton.Activated:Connect(function()
+    if isAntiCrashEnabled then
+        disableAntiCrash()
+        return
+    end
+    enableAntiCrash()
+end)
+
+local antiPauseConnection
+
+local function enableAntiPause()
+    if not RobloxGui then
+        return
+    end
+
+    pcall(function()
+        if antiPauseConnection then
+            antiPauseConnection:Disconnect()
+            antiPauseConnection = nil
+        end
+    end)
+
+    antiPauseConnection = RobloxGui.ChildAdded:Connect(function(child)
+        if child.Name == "CoreScripts/NetworkPause" then
+            child:Destroy()
+        end
+    end)
+
+    pcall(function()
+        local existing = RobloxGui:FindFirstChild("CoreScripts/NetworkPause")
+        if existing then
+            existing:Destroy()
+        end
+    end)
+end
+
+local function disableAntiPause()
+    pcall(function()
+        if antiPauseConnection then
+            antiPauseConnection:Disconnect()
+        end
+    end)
+end
+
+antiPauseButton.Activated:Connect(function()
+    isPauseEnabled = not isPauseEnabled
+
+    if isPauseEnabled then
+        enableAntiPause()
+        antiPauseButton.Text = "⏸\239\184\143 PAUSE : ON"
+        antiPauseButton.BackgroundColor3 = Color3.fromRGB(30, 110, 50)
+        antiPauseButton.TextColor3 = Color3.fromRGB(90, 255, 90)
+        showNotification("ANTI PAUSE", "Anti Gameplay Paused Diaktifkan!")
+        return
+    end
+
+    disableAntiPause()
+    antiPauseButton.Text = "⏸\239\184\143 PAUSE : OFF"
+    antiPauseButton.BackgroundColor3 = Color3.fromRGB(45, 20, 25)
+    antiPauseButton.TextColor3 = Color3.fromRGB(255, 90, 90)
+    showNotification("ANTI PAUSE", "Anti Gameplay Paused Dinyahaktifkan.")
+end)
+
+walkSpeedButton.Activated:Connect(function()
+    isWalkSpeedEnabled = not isWalkSpeedEnabled
+
+    if isWalkSpeedEnabled then
+        local speedValue = math.clamp(tonumber(walkSpeedInput.Text) or 50, 16, 500)
+        walkSpeedButton.Text = "⚡ SPEED : ON"
+        walkSpeedButton.BackgroundColor3 = Color3.fromRGB(180, 60, 20)
+        walkSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = speedValue
+            end
+        end
+
+        showNotification("SPEED WALK", "Kelajuan jalan diubah kepada: " .. tostring(speedValue))
+        return
+    end
+
+    walkSpeedButton.Text = "⚡ SPEED : OFF"
+    walkSpeedButton.BackgroundColor3 = Color3.fromRGB(35, 22, 25)
+    walkSpeedButton.TextColor3 = Color3.fromRGB(220, 160, 150)
+
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16
+        end
+    end
+
+    showNotification("SPEED WALK", "Kelajuan avatar kembali normal (16).")
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(character)
+    character:WaitForChild("Humanoid", 10)
+    task.wait(0.2)
+
+    if isWalkSpeedEnabled then
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = math.clamp(tonumber(walkSpeedInput.Text) or 50, 16, 500)
+            end
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if isWalkSpeedEnabled then
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local speedValue = math.clamp(tonumber(walkSpeedInput.Text) or 50, 16, 500)
+                if speedValue ~= humanoid.WalkSpeed then
+                    humanoid.WalkSpeed = speedValue
+                end
+            end
+        end
+    end
+end)
+
+local function disableRandomView()
+    isRandomViewEnabled = false
+    randomViewButton.Text = "🎥 VIEW : OFF"
+    randomViewButton.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
+    randomViewButton.TextColor3 = Color3.fromRGB(210, 160, 200)
+
+    local camera = Workspace.CurrentCamera
+    local ownHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+    if camera and ownHumanoid then
+        camera.CameraSubject = ownHumanoid
+    end
+end
+
+local function enableRandomView()
+    local candidates = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            table.insert(candidates, player)
+        end
+    end
+
+    if #candidates == 0 then
+        showNotification("RANDOM VIEW", "Tiada pemain lain dijumpai dalam server!")
+        disableRandomView()
+        return
+    end
+
+    local target = candidates[math.random(1, #candidates)]
+    local targetHumanoid = target.Character:FindFirstChildOfClass("Humanoid")
+    local camera = Workspace.CurrentCamera
+    if camera and targetHumanoid then
+        camera.CameraSubject = targetHumanoid
+        showNotification("RANDOM VIEW", "Sedang melihat: " .. target.DisplayName .. " (@" .. target.Name .. ")")
+    end
+end
+
+randomViewButton.Activated:Connect(function()
+    isRandomViewEnabled = not isRandomViewEnabled
+
+    if isRandomViewEnabled then
+        randomViewButton.Text = "🎥 VIEW : ON"
+        randomViewButton.BackgroundColor3 = Color3.fromRGB(160, 50, 40)
+        randomViewButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        enableRandomView()
+        return
+    end
+
+    disableRandomView()
+    showNotification("RANDOM VIEW", "Kamera kembali ke avatar sendiri.")
+end)
+
+local espStorageFolder = Instance.new("Folder")
+espStorageFolder.Name = "ZayvorESP_Storage"
+espStorageFolder.Parent = ScreenGui
+
+rejoinButton.Activated:Connect(function()
+    showNotification("REJOIN", "Menyambung semula ke server...")
+    task.wait(0.5)
+
+    if #Players:GetPlayers() <= 1 then
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        return
+    end
+
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+local function clearEspStorage()
+    espStorageFolder:ClearAllChildren()
+end
+
+local function createEspForPlayer(player, character, rootPart)
+    if not isEspEnabled or player == LocalPlayer then
+        return
+    end
+
+    if not character or not rootPart then
+        return
+    end
+
+    local highlight = espStorageFolder:FindFirstChild(player.Name .. "_Highlight")
+    if not highlight then
+        highlight = Instance.new("Highlight")
+        highlight.Name = player.Name .. "_Highlight"
+        highlight.FillColor = Color3.fromRGB(255, 100, 0)
+        highlight.FillTransparency = 0.65
+        highlight.OutlineColor = Color3.fromRGB(255, 220, 100)
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = espStorageFolder
+    end
+    highlight.Adornee = character
+
+    local billboard = espStorageFolder:FindFirstChild(player.Name .. "_BGUI")
+    if not billboard then
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = player.Name .. "_BGUI"
+        billboard.AlwaysOnTop = true
+        billboard.Size = UDim2.new(0, 140, 0, 24)
+        billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+        billboard.Parent = espStorageFolder
+
+        local label = Instance.new("TextLabel")
+        label.Name = "Label"
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.TextStrokeTransparency = 0
+        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 9.5
+        label.Parent = billboard
+    end
+    billboard.Adornee = rootPart
+end
+
+RunService.Heartbeat:Connect(function()
+    if not isEspEnabled then
+        return
+    end
+
+    local validEntries = {}
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local character = player.Character
+            if character then
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                if not rootPart then
+                    rootPart = character:FindFirstChild("Torso")
+                    if not rootPart then
+                        rootPart = character:FindFirstChild("UpperTorso") or character.PrimaryPart
+                    end
+                end
+
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                local isAlive = rootPart and humanoid and humanoid.Health > 0
+
+                if isAlive then
+                    validEntries[player.Name .. "_Highlight"] = true
+                    validEntries[player.Name .. "_BGUI"] = true
+
+                    local existingHighlight = espStorageFolder:FindFirstChild(player.Name .. "_Highlight")
+                    local existingBillboard = espStorageFolder:FindFirstChild(player.Name .. "_BGUI")
+
+                    if not existingHighlight or not existingBillboard then
+                        createEspForPlayer(player, character, rootPart)
+                    else
+                        existingHighlight.Adornee = character
+                        existingBillboard.Adornee = rootPart
+
+                        local distance = 0
+                        local myCharacter = LocalPlayer.Character
+                        if myCharacter then
+                            local myRoot = myCharacter:FindFirstChild("HumanoidRootPart")
+                            if not myRoot then
+                                myRoot = myCharacter:FindFirstChild("Torso") or myCharacter.PrimaryPart
+                            end
+                            if myRoot then
+                                distance = math.floor((myRoot.Position - rootPart.Position).Magnitude)
+                            end
+                        end
+
+                        local label = existingBillboard:FindFirstChild("Label")
+                        if label then
+                            label.Text = player.Name .. " [" .. tostring(distance) .. "m]"
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for _, child in ipairs(espStorageFolder:GetChildren()) do
+        if not validEntries[child.Name] then
+            child:Destroy()
+        end
+    end
+end)
+
+espButton.Activated:Connect(function()
+    isEspEnabled = not isEspEnabled
+
+    if isEspEnabled then
+        espButton.Text = "👁\239\184\143 ESP : ON"
+        espButton.BackgroundColor3 = Color3.fromRGB(0, 140, 170)
+        espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        showNotification("ESP SYSTEM", "100% Pemain Dijejak dengan Outline Avatar!")
+        return
+    end
+
+    espButton.Text = "👁\239\184\143 ESP : OFF"
+    espButton.BackgroundColor3 = Color3.fromRGB(20, 45, 55)
+    espButton.TextColor3 = Color3.fromRGB(100, 220, 255)
+    clearEspStorage()
+    showNotification("ESP SYSTEM", "Sistem ESP ditutup.")
+end)
+
+task.spawn(function()
+    while true do
+        if isSpamming then
+            local myGeneration = spamGeneration
+
+            pcall(function()
+                local burstCount = spamMode == "DESTROY" and 25 or 1
+                local globalPianoConnector = Workspace:FindFirstChild("GlobalPianoConnector")
+                local character = LocalPlayer.Character
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
+                local shouldStop = false
+
+                for _ = 1, burstCount do
+                    if shouldStop then
+                        break
+                    end
+
+                    if not isSpamming or spamGeneration ~= myGeneration then
+                        break
+                    end
+
+                    for i = 1, #remotePathList do
+                        if not isSpamming or spamGeneration ~= myGeneration then
+                            break
+                        end
+
+                        local remote = resolveInstancePath(remotePathList[i])
+                        if remote then
+                            if remote:IsA("RemoteEvent") then
+                                if pcall(function()
+                                    remote:FireServer()
+                                end) then
+                                    totalSent += 1
+                                    sentThisSecond += 1
+                                    if checkLimit() then
+                                        shouldStop = true
+                                        break
+                                    end
+                                end
+                            elseif remote:IsA("RemoteFunction") then
+                                task.spawn(function()
+                                    if not isSpamming or spamGeneration ~= myGeneration then
+                                        return
+                                    end
+                                    if pcall(function()
+                                        remote:InvokeServer()
+                                    end) then
+                                        totalSent += 1
+                                        sentThisSecond += 1
+                                        checkLimit()
+                                    end
+                                end)
+                            end
+                        end
+                    end
+
+                    if shouldStop or checkLimit() then
+                        break
+                    end
+
+                    if globalPianoConnector and globalPianoConnector:IsA("RemoteEvent") then
+                        if not isSpamming or spamGeneration ~= myGeneration then
+                            shouldStop = true
+                            break
+                        end
+
+                        task.spawn(function()
+                            for i = 1, 61 do
+                                if not isSpamming or spamGeneration ~= myGeneration then
+                                    return
+                                end
+                                if pcall(function()
+                                    globalPianoConnector:FireServer("play", i)
+                                end) then
+                                    totalSent += 1
+                                    sentThisSecond += 1
+                                    if checkLimit() then
+                                        break
+                                    end
+                                end
+                            end
+
+                            for _, soundId in ipairs(pianoConfig.PianoSounds) do
+                                if not isSpamming or spamGeneration ~= myGeneration then
+                                    return
+                                end
+                                if pcall(function()
+                                    globalPianoConnector:FireServer("play", soundId)
+                                end) then
+                                    totalSent += 1
+                                    sentThisSecond += 1
+                                    if checkLimit() then
+                                        return
+                                    end
+                                end
+                            end
+                        end)
+                    end
+
+                    if character or backpack then
+                        if not isSpamming or spamGeneration ~= myGeneration then
+                            shouldStop = true
+                            break
+                        end
+
+                        for _, foodName in ipairs(foodNames) do
+                            if not isSpamming or spamGeneration ~= myGeneration then
+                                shouldStop = true
+                                break
+                            end
+
+                            local tool = character and character:FindFirstChild(foodName)
+                            if not tool then
+                                tool = backpack and backpack:FindFirstChild(foodName)
+                            end
+
+                            if tool then
+                                local eatRemote = tool:FindFirstChild("eat")
+                                if eatRemote and eatRemote:IsA("RemoteEvent") and pcall(function()
+                                    eatRemote:FireServer()
+                                end) then
+                                    totalSent += 1
+                                    sentThisSecond += 1
+                                    if checkLimit() then
+                                        shouldStop = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if isSpamming and spamGeneration == myGeneration then
+                    if deviceTypeRemote and deviceTypeRemote:IsA("RemoteEvent") and pcall(function()
+                        deviceTypeRemote:FireServer("Mobile")
+                    end) then
+                        totalSent += 1
+                        sentThisSecond += 1
+                        checkLimit()
+                    end
+
+                    updateStatsLabel()
+                end
+            end)
+
+            if isSpamming and myGeneration == spamGeneration then
+                if spamMode == "DESTROY" then
+                    task.wait()
+                else
+                    task.wait(0.12)
+                end
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+teleportSpawnButton.Activated:Connect(function()
+    local character = LocalPlayer.Character
+
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        if character:FindFirstChildOfClass("Humanoid").Sit then
+            showNotification("TELEPORT GAGAL", "Avatar anda sedang duduk!\nSila bangun dahulu.")
+            return
+        end
+
+        local rootPart = character:FindFirstChild("HumanPartRoot")
+        if not rootPart then
+            rootPart = character:FindFirstChild("HumanoidRootPart")
+            if not rootPart then
+                rootPart = character:FindFirstChild("Torso") or character.PrimaryPart
+            end
+        end
+
+        if not rootPart then
+            showNotification("TELEPORT GAGAL", "Bahagian utama (RootPart) tidak dijumpai!")
+            return
+        end
+
+        local spawnPart
+        for _, descendant in ipairs(Workspace:GetDescendants()) do
+            if descendant:IsA("SpawnLocation") then
+                spawnPart = descendant
+                break
+            end
+        end
+
+        if not spawnPart then
+            for _, descendant in ipairs(Workspace:GetDescendants()) do
+                if descendant:IsA("BasePart") and string.find(string.lower(descendant.Name), "spawn") then
+                    spawnPart = descendant
+                    break
+                end
+            end
+        end
+
+        if spawnPart then
+            rootPart.CFrame = spawnPart.CFrame + Vector3.new(0, 4, 0)
+            showNotification("TELEPORT BERJAYA", "Berjaya teleport ke: " .. spawnPart.Name)
+            return
+        end
+
+        showNotification("TELEPORT GAGAL", "Lokasi 'Spawn' tidak ditemui!")
+    end
+end)
+
+closeButton.Activated:Connect(function()
+    spamGeneration += 1
+    disableRandomView()
+
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if isWalkSpeedEnabled then
+                humanoid.WalkSpeed = math.clamp(tonumber(walkSpeedInput.Text) or 50, 16, 500)
+            else
+                humanoid.WalkSpeed = 16
+            end
+        end
+    end
+
+    disableAntiPause()
+    disableAntiCrash()
+    clearEspStorage()
+    ScreenGui:Destroy()
+end)
+
+local FishingModule = (function()
+    local module = {}
+    local fishingSystemRoot = game:GetService("ReplicatedStorage"):FindFirstChild("Fishing_System")
+
+    if not fishingSystemRoot then
+        return module
+    end
+
+    local fishingSystem = fishingSystemRoot:FindFirstChild("FishingSystem")
+    local remotes = fishingSystemRoot:FindFirstChild("Remotes")
+
+    if not fishingSystem or not remotes then
+        return module
+    end
+
+    local AnimationsHandler = require(fishingSystem.AnimationsHandler)
+    local GUIHandler = require(fishingSystem.GUI_Handler)
+    local Configuration = require(fishingSystem.Configuration)
+
+    local handlers = {
+        AnimationsLoader = AnimationsHandler,
+        GUI_Handler = GUIHandler,
+        Configs = Configuration
+    }
+
+    local remotesTable = {
+        EquippRemote = remotes.EquippedRod,
+        UnEquippRemote = remotes.UnEquippedRod,
+        SendPositionRemote = remotes.SendPosition,
+        BeginFishingRemote = remotes.BeginFishing
+    }
+
+    local function catchFish(tool, player)
+        local roll = math.random(1, 100)
+        local rarity
+        if roll >= 70 then
+            rarity = "Common"
+        elseif roll >= 20 then
+            rarity = "UnCommon"
+        elseif roll >= 10 then
+            rarity = "Rare"
+        else
+            rarity = "Common"
+        end
+
+        local fishesFolder = game.ReplicatedStorage.Fishing_System.FishingSystem.Configuration.Fishes
+        local children = fishesFolder:FindFirstChild(rarity):GetChildren()
+        local fish = children[math.random(1, #children)]
+        local fishData = {
+            Fish_Name = fish.Name,
+            FishImage = fish:GetAttribute("FishImage"),
+            Sell_Price_KG = fish:GetAttribute("Sell_Price_Per_KG"),
+            Weight = math.random(fish:GetAttribute("Weight").Min, fish:GetAttribute("Weight").Max)
+        }
+
+        handlers.AnimationsLoader.StopAllAnims(player)
+
+        local track = player.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.Fishing_System.Animations.Catching_Animation)
+        repeat
+            task.wait()
+        until track.Length > 0
+        track:Play()
+        repeat
+            task.wait()
+        until track.IsPlaying == false
+
+        local catchedFish = player.PlayerGui.Fishing_UI.CatchedFish
+        catchedFish.Visible = true
+        catchedFish.FishImage.Image = fishData.FishImage
+        catchedFish.FishName.Text = fishData.Fish_Name
+        catchedFish.Rarity.Text = rarity
+        catchedFish.Weight.Text = string.format("%skg", fishData.Weight)
+        catchedFish.SellPrice.Text = fishData.Weight * fishData.Sell_Price_KG
+
+        local spinTween = game:GetService("TweenService"):Create(catchedFish.sm2, TweenInfo.new(8, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1), {
+            Rotation = 360
+        })
+        spinTween:Play()
+
+        local floatCoroutine = coroutine.create(function()
+            while catchedFish ~= nil do
+                game:GetService("TweenService"):Create(catchedFish.FishImage, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+                    Position = UDim2.new(0.483, 0, 0.519, 0)
+                }):Play()
+                task.wait(1.5)
+                game:GetService("TweenService"):Create(catchedFish.FishImage, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+                    Position = UDim2.new(0.483, 0, 0.499, 0)
+                }):Play()
+                task.wait(1.5)
+            end
+        end)
+        coroutine.resume(floatCoroutine)
+
+        game:GetService("TweenService"):Create(catchedFish.Background, TweenInfo.new(0.5), {
+            BackgroundTransparency = 0.3
+        }):Play()
+        task.wait(0.5)
+
+        game:GetService("TweenService"):Create(catchedFish.smt1, TweenInfo.new(0.5), {
+            ImageTransparency = 0
+        }):Play()
+        game:GetService("TweenService"):Create(catchedFish.sm2, TweenInfo.new(0.5), {
+            ImageTransparency = 0
+        }):Play()
+        task.wait(0.25)
+
+        game:GetService("TweenService"):Create(catchedFish.smt1, TweenInfo.new(0.5), {
+            ImageTransparency = 0
+        }):Play()
+        game:GetService("TweenService"):Create(catchedFish.FishName, TweenInfo.new(0.5), {
+            TextTransparency = 0
+        }):Play()
+        game:GetService("TweenService"):Create(catchedFish.FishName.UIStroke, TweenInfo.new(0.5), {
+            Transparency = 0.5
+        }):Play()
+        task.wait(0.5)
+
+        for _, child in pairs(catchedFish:GetChildren()) do
+            if child:IsA("ImageButton") then
+                game:GetService("TweenService"):Create(child, TweenInfo.new(0.5), {
+                    ImageTransparency = 0
+                }):Play()
+            end
+        end
+
+        catchedFish.Parent.FishFinish:Play()
+        task.wait(0.15)
+
+        game:GetService("TweenService"):Create(catchedFish.Rarity, TweenInfo.new(0.5), {
+            TextTransparency = 0
+        }):Play()
+        game:GetService("TweenService"):Create(catchedFish.SellPrice, TweenInfo.new(0.5), {
+            TextTransparency = 0
+        }):Play()
+        game:GetService("TweenService"):Create(catchedFish.Weight, TweenInfo.new(0.5), {
+            TextTransparency = 0
+        }):Play()
+
+        for _, child in pairs(catchedFish:GetChildren()) do
+            if child.Name == "TextLabel" then
+                game:GetService("TweenService"):Create(child, TweenInfo.new(0.5), {
+                    TextTransparency = 0.3
+                }):Play()
+            end
+        end
+
+        task.wait(3)
+
+        for _, descendant in pairs(catchedFish:GetDescendants()) do
+            pcall(function()
+                game:GetService("TweenService"):Create(descendant, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+            end)
+            pcall(function()
+                game:GetService("TweenService"):Create(descendant, TweenInfo.new(0.5), {Transparency = 1}):Play()
+            end)
+            pcall(function()
+                game:GetService("TweenService"):Create(descendant, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+            end)
+            pcall(function()
+                game:GetService("TweenService"):Create(descendant, TweenInfo.new(0.5), {ImageTransparency = 1}):Play()
+            end)
+        end
+
+        task.wait(0.5)
+        spinTween:Pause()
+        coroutine.close(floatCoroutine)
+        catchedFish.Visible = false
+
+        repeat
+            task.wait()
+        until catchedFish.Visible == false
+
+        require(game.ReplicatedStorage.Fishing_System.FishingSystem.GUI_Handler).InitOnUnEquipp(fishingSystemRoot)
+        require(game.ReplicatedStorage.Fishing_System.FishingSystem.GUI_Handler).InitOnEquipp(fishingSystemRoot, tool)
+        game.ReplicatedStorage.Fishing_System.Remotes.FinalTask:FireServer(tool, fishData)
+    end
+
+    function module.FishOnHook(tool)
+        local localPlayer = game.Players.LocalPlayer
+        local shouldProceed = true
+
+        for _ = 0, math.random(1, 5) do
+            local hookSuccess = (function()
+                local fishingUI = localPlayer.PlayerGui:FindFirstChild("Fishing_UI")
+                local isWaiting = true
+                local waitDone = false
+                local timerFired = false
+
+                if fishingUI ~= nil then
+                    local task = fishingUI.Task
+                    local timer = task.Timer
+
+                    task.Visible = true
+                    fishingUI.Progress.Visible = false
+
+                    local countdownCoroutine = coroutine.create(function()
+                        timer.TextLabel.Text = "2s"
+                        task.wait(1)
+                        timer.TextLabel.Text = "1s"
+                        task.wait(1)
+                        timer.TextLabel.Text = "0s"
+                    end)
+
+                    local timeoutCoroutine = coroutine.create(function()
+                        task.wait(2)
+                        if localPlayer.PlayerGui:FindFirstChild("Fishing_UI") then
+                            isWaiting = false
+                            handlers.GUI_Handler.InitOnUnEquipp(fishingSystemRoot)
+                            handlers.GUI_Handler.InitOnEquipp(fishingSystemRoot)
+                            waitDone = true
+                        end
+                    end)
+
+                    coroutine.resume(countdownCoroutine)
+                    coroutine.resume(timeoutCoroutine)
+
+                    local activationCoroutine = coroutine.create(function()
+                        tool.Activated:Connect(function()
+                            if isWaiting == true then
+                                coroutine.close(countdownCoroutine)
+                                coroutine.close(timeoutCoroutine)
+                                waitDone = true
+                                timerFired = true
+                                return
+                            end
+                            timerFired = false
+                            coroutine.close(countdownCoroutine)
+                            coroutine.close(timeoutCoroutine)
+                        end)
+                    end)
+
+                    coroutine.resume(activationCoroutine)
+
+                    repeat
+                        task.wait()
+                    until waitDone == true
+
+                    coroutine.close(activationCoroutine)
+
+                    return (function()
+                        if timerFired ~= true then
+                            return false
+                        end
+
+                        tool.Handle.FastSpinning:Pause()
+                        tool.Handle.SpinningLittle:Play()
+
+                        local track = localPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.Fishing_System.Animations.Fishing_Anim)
+                        track.Looped = false
+                        handlers.AnimationsLoader.StopAllAnims(localPlayer)
+                        track:Play()
+                        task.Visible = false
+                        return true
+                    end)()
+                end
+            end)()
+
+            if hookSuccess ~= true then
+                localPlayer.Character.Humanoid.WalkSpeed = 16
+                tool.Handle.FastSpinning:Pause()
+                game.ReplicatedStorage.Fishing_System.Remotes.BugFixer:FireServer(tool)
+                shouldProceed = false
+                break
+            end
+
+            task.wait(0.77)
+            task.wait(0.27)
+            handlers.AnimationsLoader.StopAllAnims(localPlayer)
+            handlers.AnimationsLoader.IdleAnimation(localPlayer)
+        end
+
+        if shouldProceed == true then
+            catchFish(tool, localPlayer)
+        end
+    end
+
+    function module.Init(tool, targetPosition)
+        local toolRef = tool
+
+        local function firePosition(position)
+            local character = LocalPlayer.Character
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart") or (character:FindFirstChild("Torso") or character.PrimaryPart)
+
+            if not position then
+                if rootPart then
+                    position = rootPart.Position + rootPart.CFrame.LookVector * 15
+                end
+                if not position then
+                    position = Vector3.zero
+                end
+            end
+
+            local data = typeof(position) == "table" and position.Position and position or {Position = position}
+
+            pcall(function()
+                if remotesTable.SendPositionRemote and remotesTable.SendPositionRemote:IsA("RemoteEvent") then
+                    remotesTable.SendPositionRemote:FireServer(data)
+                end
+                if remotesTable.BeginFishingRemote and remotesTable.BeginFishingRemote:IsA("RemoteEvent") then
+                    remotesTable.BeginFishingRemote:FireServer(toolRef, data)
+                end
+            end)
+        end
+
+        if targetPosition then
+            firePosition(targetPosition)
+        else
+            local isValidTool = toolRef and typeof(toolRef) == "Instance" and toolRef:IsA("Tool")
+            if isValidTool then
+                toolRef.Activated:Connect(function()
+                    firePosition()
+                end)
+            else
+                firePosition()
+            end
+        end
+
+        pcall(function()
+            if remotesTable.SendPositionRemote and remotesTable.SendPositionRemote:IsA("RemoteEvent") then
+                remotesTable.SendPositionRemote.OnServerEvent:Connect(function(player, position)
+                    for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                        if otherPlayer ~= player then
+                            remotesTable.SendPositionRemote:FireClient(otherPlayer, player, position)
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+
+    return module
+end)()
