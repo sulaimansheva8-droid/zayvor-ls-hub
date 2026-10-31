@@ -6,7 +6,7 @@ export default function handler(req, res) {
     res.setHeader('Content-Type', 'text/plain');
     
     // Link Pastebin Anda
-    const pastebinUrl = "https://pastebin.com/raw/Hng969WC";
+    const pastebinUrl = "https://pastebin.com/raw/WhRGbUEE";
     
     // Perintah untuk menyuruh Roblox mengambil script dari Pastebin
     const luaCode = 'loadstring(game:HttpGet("' + pastebinUrl + '"))()';
