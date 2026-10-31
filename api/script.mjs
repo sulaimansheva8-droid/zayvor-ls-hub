@@ -1,11 +1,19 @@
-module.exports = (req, res) => {
+export default function handler(req, res) {
   const ua = req.headers['user-agent'] || '';
-  
+
+  // Cek apakah yang mengakses adalah Roblox
   if (ua.includes("Roblox") || ua.includes("RobloxGameCloud") || ua.includes("WinInet")) {
     res.setHeader('Content-Type', 'text/plain');
-    // Vercel menyuruh Roblox mengambil script dari link Pastebin Anda
-    res.status(200).send(`loadstring(game:HttpGet("https://pastebin.com/raw/svvJgea6"))()`);
+    
+    // Link Pastebin Anda
+    const pastebinUrl = "https://pastebin.com/raw/Hng969WC";
+    
+    // Perintah untuk menyuruh Roblox mengambil script dari Pastebin
+    const luaCode = 'loadstring(game:HttpGet("' + pastebinUrl + '"))()';
+    
+    res.status(200).send(luaCode);
   } else {
+    // Tampilan 404 untuk browser biasa (Chrome/Safari)
     res.setHeader('Content-Type', 'text/html');
     res.status(404).send(`
       <html>
@@ -16,4 +24,4 @@ module.exports = (req, res) => {
       </html>
     `);
   }
-};
+}
